@@ -6,6 +6,9 @@ import re
 
 
 def main_part():
+
+    # -----------------------------------BOOKS CLEANING----------------------------------------------------
+
     df_books = pd.read_csv('BX-Books.csv', sep='";"', encoding='Latin-1',
                            engine='python')  # use of python engine in order to use more complex sep pattern
     print('The number of the initial dataset is:', len(df_books), 'lines\n')
@@ -49,7 +52,7 @@ def main_part():
 
     df_books.to_csv('BX-Books_clean.csv')
 
-    # ----------------------------------------------Ratigns Cealing----------------------------------
+    # ------------------------------Ratigns Cealing----------------------------------------------------
 
     rating_df = pd.read_csv('BX-Book-Ratings.csv', sep=';', encoding='Latin-1')
     print('1. The initial number of Total Ratings is:', len(rating_df), '\n')
@@ -120,7 +123,7 @@ def main_part():
 
     final_rating_clean.to_csv('BX-Book-Ratings_clean.csv', index=False)
 
-    # ____________________________________________________________________________________________________
+    # ____________________________________USERS CLEANING________________________________________________________________
 
     users_df = pd.read_csv('BX-Users.csv', sep=";", encoding="Latin-1")
     print('The initial number of users is:', len(users_df), 'lines\n')
@@ -136,7 +139,7 @@ def main_part():
 
     users_df.to_csv('BX-Users_clean.csv', index=False)
 
-    # ----------------------------------COMMON_VALUES---------------------------------------------------------------------
+    # ----------------------------------COMMON_VALUES BETWEEN TABLES--------------------------------------------
 
     df_ratings = pd.read_csv('BX-Book-Ratings_clean.csv')
     df_users = pd.read_csv('BX-Users_clean.csv')
@@ -155,12 +158,16 @@ def main_part():
 
     # -----------------------------C_SIM--------------------------------------------------------------------
 
+    # Delete csv if it exists because we use append modes later on
     if os.path.exists("user-pairs.csv"):
         os.remove('user-pairs.csv')
 
     if os.path.exists("user_means.csv"):
         os.remove('user_means.csv')
 
+    #In this function u,v must have the same length
+    # u is the ratings of user_a and v ratings of user_b (Only for their common books)
+    # user_one and user_two contains all the ratings of each user
     def csim(u, v, user_one, user_two):
         return np.dot(u, v) / (np.linalg.norm(user_one) * np.linalg.norm(user_two))
 
@@ -170,14 +177,13 @@ def main_part():
     df = pd.read_csv('BX-Book-Ratings_clean.csv').sort_values(by='User-ID')
     df['Book-Rating'] = df['Book-Rating'].astype('int8')
     df['User-ID'] = df['User-ID'].astype('int32')
-    # df = df[1:20000]
     print('Creating Dictionary...')
     # Create empty dicts and lists
     isbn_dict = {"ISBN": [], "ratings": []}
     user_dict = []
     user_list = []
 
-    # group by isbn splits df into multiple dfs based on isbn
+    # group by isbn splits df into multiple dfs based on user-id
     df_g = df.groupby('User-ID')['ISBN', 'Book-Rating']
 
     for User, User_df in df_g:
@@ -186,80 +192,89 @@ def main_part():
         user_dict.append(isbn_dict)
         user_list.append(User)
     #
-    # # we have a list of dictionaries and a list of isbn
-    # # by zipping into dict not we have a dictionary with
-    # # key = isbn and values = dictionary
-    # # with keys user id and ratings
+    # # we have a list of dictionaries and each dictionary has keys: ISBN and Book-Ratings
+    # And as value of each key is a list with all books the user read in the past and the ratings of them
+    # by zipping into dict not we have a dictionary with
+    # # key = user-ID and values = dictionary (the dictionary above)
+
     books_dictionary = dict(zip(user_list, user_dict))
-    #
+    # Now we have a nested dictionary
     print('Done\n start looking for similarities')
+
+    # You can uncomment the next for loop to see the results of the zipped dictionary
+    # for key, value in books_dictionary.items():
+    #     print(key,value)
 
     counter = 0
 
-    for user_a, values_a in books_dictionary.items():  # loop for your to compare
+    for user_a, values_a in books_dictionary.items():  # loop for each user to compare him with all the other users
         counter += 1
         if counter % 1000 == 0:
             print(counter, len(books_dictionary))
-        # print(counter, '/', len(books_dictionary), '   ', round((counter / len(books_dictionary) * 100), 2), '%')
-        books_a = values_a['ISBN']
-        ratings_books_a = values_a['Book-Rating']
-        mean_user_a = np.mean(ratings_books_a)
-        # print(mean_user_a)
+        books_a = values_a['ISBN'] # All the books user_a has rate so far
+        ratings_books_a = values_a['Book-Rating'] # All the ratings of those books
+        mean_user_a = np.mean(ratings_books_a) # Mean rating of user_a
         for user_b, values_b in books_dictionary.items():  # second user to compare
             if user_b != user_a:  # check not to compare user with himself
                 u = []  # vector of ratings for user a
                 v = []  # vector of ratings for user b
-                books_b = values_b['ISBN']  # list of books of user 2
-                ratings_books_b = values_b['Book-Rating']
+                books_b = values_b['ISBN']  # list of books of user_b
+                ratings_books_b = values_b['Book-Rating'] # Ratings of those books
 
                 if set(books_b).intersection(books_a):
                     for book in books_b:  # check if they have common books
                         if book in books_a:
+                            # the .index helps append the 2 vectors with respect at the position
+                            # because we need each rating's position of vector u for a specific book to be in the same
+                            # index position at vector v
                             u.append(values_a['Book-Rating'][books_a.index(book)])
                             v.append(values_b['Book-Rating'][books_b.index(book)])
-
-                if len(u) > 0:
+                x = float(csim(u, v, ratings_books_a, ratings_books_b))
+                text = f'{user_a};{user_b};{x}\n'
+                print(text)
+                #If the 2 vectors are not empty then we can calculate the similarity
+                if len(u) > 0 and len(v) > 0:
                     x = float(csim(u, v, ratings_books_a, ratings_books_b))
                     with open('user_similarity.csv', 'a') as out:
                         text = f'{user_a};{user_b};{x}\n'
-                        out.write(text)
+                        # out.write(text)
                     with open('user-pairs-books.data', 'a') as out2:
                         text = f'{user_a};{user_b};{x}\n'
-                        out2.write(text)
+                        # out2.write(text)
+    out.close()
     out2.close()
 
-    counter = 0
+    # Also store the mean rating of each user in a csv for later use with easier access to it
     for user_a, values_a in books_dictionary.items():  # loop for your to compare
-        counter += 1
-        print(counter, '/', len(books_dictionary), '   ', round((counter / len(books_dictionary) * 100), 2), '%')
         ratings_books_a = values_a['Book-Rating']
         mean_user_a = np.mean(ratings_books_a)
-        with open('user_av_rating.csv', 'a') as out:
+        with open('user_av_rating.csv', 'a') as out3:
             text = f'{user_a};{mean_user_a}\n'
-            out.write(text)
+            out3.write(text)
+    out3.close()
 
 
 def prediction_world():
     # _____________________________________K_nearest_______________________________________________________________
-
+    # Delete the csv if it exists
     if os.path.exists("k_nearest.csv"):
         os.remove('k_nearest.csv')
 
+    # Read as DataFrame the csv of user pairs similarity
     df = pd.read_csv('user_similarity.csv', sep=';', names=['user_a', 'user_b', 'c_sim'])
-    k = 2
+    k = 2 # Set the number of nearest neighbors we want
 
     x = df.groupby(['user_a'])[['user_b', 'c_sim']]
 
     print('export k_nearest...')
-
+    # Group the DataFrame based on user_a
     for user_a, user_b in x:
         temp_df = x.get_group(user_a)
-        temp_df.sort_values(by='c_sim', ascending=False, inplace=True)
+        temp_df.sort_values(by='c_sim', ascending=False, inplace=True) # Sort the data so highest similarity is up
         temp_df['user_a'] = user_a
-        temp_df = temp_df[:k]
-        # temp_df.set_index('user_a',inplace=True)
+        temp_df = temp_df[:k] # Keep only the first k neighbors
 
-        temp_df = temp_df[['user_a', 'user_b', 'c_sim']]
+        temp_df = temp_df[['user_a', 'user_b', 'c_sim']] #name the columns
         # print(temp_df)
         temp_df.to_csv('k_nearest.csv', mode='a', header=False, index=False)
     print('Finished!')
@@ -267,7 +282,7 @@ def prediction_world():
     # temp_df.to_json('k_nearest_json')
 
     # -------------------------------------Predict----------------------------------------------------------------
-
+    # Read the appropriate DataFrames and delete the csv with predictions of each user if exists
     df_mean = pd.read_csv('user_av_rating.csv', names=['user', 'mean_rating'], sep=';')
     df_mean['mean_rating'] = df_mean['mean_rating'].astype('float32')
     df_mean['user'] = df_mean['user'].astype('int32')
@@ -293,42 +308,51 @@ def prediction_world():
     # errors = []
 
     counter = 0
+    # Loop for each unique user
     for user_a in df_mean['user']:
         counter += 1
         if counter % 500 == 0:
             print(round((counter / len(df_mean) * 100), 2), '%')
-        user_a_books = list(df_ratings['ISBN'][df_ratings['User-ID'] == user_a])
-        mean_a = df_mean['mean_rating'][df_mean['user'] == user_a].values[0]
-        neighbors_a = list(df_nearest[df_nearest['user_a'] == user_a]['user_b'])
-        if len(neighbors_a) > 0:
+        user_a_books = list(df_ratings['ISBN'][df_ratings['User-ID'] == user_a]) #books of user a
+        mean_a = df_mean['mean_rating'][df_mean['user'] == user_a].values[0] # mean rating of user_a
+        neighbors_a = list(df_nearest[df_nearest['user_a'] == user_a]['user_b']) # list with all user_a's neighbors
+        if len(neighbors_a) > 0: # If he has neighbors we are calculating the predicted rating, else next user
+            # For each book of user a we will check if any of his neighbors has rate this book
+            # If so we will add at the nominator or prediction formula the coresponding value
             for book in user_a_books:
                 nominator = 0
                 denominator = 0
 
-                for user_b in neighbors_a:
+                for user_b in neighbors_a: # for each neighbor of user_a
+                    # find his mean rating and the similarity with user_a
                     user_b_books = list(df_ratings['ISBN'][df_ratings['User-ID'] == user_b])
                     mean_b = df_mean[df_mean['user'] == user_b]['mean_rating'].values[0]
                     # print(mean_b)
                     sim = df_nearest['c_sim'][
                         (df_nearest['user_b'] == user_b) & (df_nearest['user_a'] == user_a)].values
                     denominator += sim
-
+                    # If they have a common book then add the value to the nominator
                     if book in user_b_books:
                         user_b_rating = df_ratings['Book-Rating'][(df_ratings['User-ID'] == user_b) & (
                                 df_ratings['ISBN'] == book)].values[0]
                         nominator += sim * (user_b_rating - mean_b)
+                    # Else add 0 to the nominator by replacing the missing rating of user_b for that book with his mean
+                    # Which will result 0
                     else:
                         user_b_rating = mean_b
                         nominator += sim * (user_b_rating - mean_b)
                 prediction = (mean_a + (nominator / denominator))[0]
+                # After applying the formula we have a prediction for user_a for each book he has read already
+                # And we save these results in a csv file
                 with open('user_predictions.csv', 'a') as output:
                     text = f'{user_a};{book};{round(float(prediction), 2)}\n'
                     output.write(text)
+                # Now we can go on and evaluate these predictions with the original ratings of each user
 
     output.close()
 
     # ------------------------------------------------EVALUATION--------------------------------------------------
-
+    # Fix predictions more than 10 oless than 0
     df_predict = pd.read_csv('user_predictions.csv', sep=';', names=['User-ID', 'ISBN', 'Prediction'])
     df_predict[df_predict['Prediction'] > 10] = 10
     df_predict[df_predict['Prediction'] < 0] = 0
@@ -336,12 +360,14 @@ def prediction_world():
 
     df_ratings = pd.read_csv('BX-Book-Ratings_clean.csv')
     print(df_ratings.head())
-
+    # The evaluation will be applied only on users that :
+    # Had similarity with at least 1 user by subtracting each prediction from his initial rating
     df_merged = pd.merge(df_predict, df_ratings, how='inner', on=['User-ID', 'ISBN'])
     df_merged['diff'] = df_merged['Prediction'] - df_merged['Book-Rating']
     df_merged['diff_square'] = (df_merged['Prediction'] - df_merged['Book-Rating']) ** 2
     print(df_merged.sort_values(by='diff', ascending=False))
 
+    # And here we constract out formulas to measure those differences
     mae = sum(np.abs(df_merged['diff'])) / len(df_merged['diff'])
     nmae = mae / (df_merged['Book-Rating'].max() - df_merged['Book-Rating'].min())
     rmse = np.sqrt(sum(df_merged['diff_square']) / len(df_merged['diff_square']))
@@ -357,7 +383,8 @@ def prediction_world():
 
 def prediction_america():
     # _____________________________________K_nearest_______________________________________________________________
-
+    # This function will calculate predict and evaluate the results just like the previous one based only on
+    # users from USA and Canada
     if os.path.exists("k_nearest_america.csv"):
         os.remove('k_nearest_america.csv')
 
@@ -478,6 +505,8 @@ def prediction_america():
 
 def non_america():
     # _____________________________________K_nearest_______________________________________________________________
+    # This function will calculate predict and evaluate the results just like the previous one based only on
+    # users not from USA and Canada
 
     if os.path.exists("k_nearest_non_america.csv"):
         os.remove('k_nearest_non_america.csv')
@@ -600,7 +629,8 @@ def non_america():
 
 def country(c):
     # _____________________________________K_nearest_______________________________________________________________
-
+    #  This function will calculate predict and evaluate the results just like the previous one based only on
+    #  The country you will ask for.
     if os.path.exists("k_nearest_" + c + ".csv"):
         os.remove("k_nearest_" + c + ".csv")
 
@@ -721,6 +751,9 @@ def country(c):
 
 
 def sql_load(p,u):
+    # This function will create a database
+    # Create the appropriete tables
+    # and populate them in order to store the results by just running after you enter your MYSQL credentials
     conn = mysql.connector.connect(host='localhost', password=p, user=u, allow_local_infile=True)
 
     cursor = conn.cursor()
@@ -860,20 +893,20 @@ def sql_load(p,u):
 
 
 
-
-
-prediction_world()
-prediction_america()
-non_america()
-
-passwr = input('Enter password:')
-usern = input('Enter User-Name:')
-sql_load(p=passwr, u=usern)
-
-c = str(input('choose a country:'))
-
-try:
-
-    country(c)
-except:
-    print('Country not exists.')
+#
+# main_part()
+# prediction_world()
+# prediction_america()
+# non_america()
+#
+# passwr = input('Enter password:')
+# usern = input('Enter User-Name:')
+# sql_load(p=passwr, u=usern)
+#
+# c = str(input('choose a country:'))
+#
+# try:
+#
+#     country(c)
+# except:
+#     print('Country not exists.')
