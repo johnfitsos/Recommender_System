@@ -35,4 +35,6 @@ How to run:
 7)Once main part has run it will output a csv with the similarities. This is a required input of all the other functions in order to avoid recalculation of it.
   Besides that the other functions are independent in terms of predicting and evalueting the results.
 8)At the end of each part it will print the evaluation tests (mae,nmae,mrse)
-More other there is a function to predict the ratings for a specific country which you will have to choose
+9)Also there are 3 files from jupyter notebook where it contains the code of matplotlib in which we created the grapghs for the project
+10)The file called 'Understanding the data.ipynb' explains a few things about the dataset as an answer for PART-A Q.1
+
