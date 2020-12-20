@@ -4,6 +4,10 @@ Libraries:
 ----------------
 Python 3:
 ----------------
+probables (only for part B)
+pympler.asizeof (only for part B)
+math(only for part B)
+hyperloglog (only for part B)
 mysql.connector
 pandas
 numpy
@@ -16,6 +20,7 @@ re
 mysql should be installed in your machine
 ----------------
 
+PART A
 ---------------------------------------------------------------------------------------------
 Documents:
 
@@ -37,4 +42,16 @@ How to run:
 8)At the end of each part it will print the evaluation tests (mae,nmae,mrse)
 9)Also there are 3 files from jupyter notebook where it contains the code of matplotlib in which we created the grapghs for the project
 10)The file called 'Understanding the data.ipynb' explains a few things about the dataset as an answer for PART-A Q.1
+
+PART B
+----------------------------------------------------------------------------------------------------
+Make sure you have the tweets.json.0-45 in the same folder as the .py files
+
+How to run:
+1)Run the Tweets-HeavyHitters.py
+2)You will need to insert the number of heavy hitters you wish to be displayed for every 1000 rows
+  and the number to top heavy hitter you prefer out of the total data (e.g. you might want to see the top 10 for every one thousand
+  and the top 100 from the total hitters)
+3)Run the Tweets-unique_keys_counting.py for the second question of part B
+
 
