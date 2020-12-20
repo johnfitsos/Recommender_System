@@ -1,0 +1,38 @@
+Requirements:
+---------------------------------------------------------------------------------------------
+Libraries:
+----------------
+Python 3:
+----------------
+mysql.connector
+pandas
+numpy
+matplotlib
+json
+os
+re
+
+----------------
+mysql should be installed in your machine
+----------------
+
+---------------------------------------------------------------------------------------------
+Documents:
+
+BX-Books.csv
+BX-Users.csv
+BX-Book-Ratings.csv
+
+
+How to run:
+1)You need to make sure that all the required libraries are installed in python
+2)Also it is required to have the 3 initial dataset csv files at the same folder with the main.py
+3)All the functions inside the code will be able to run only when the function called 'main_part' has finish and provides the output.
+  This will clean the dataset and it will calculate similarities for each user.
+5)By default the code will start running and predict + evaluate the results for the whole dataset and later on only for some regions.
+6)After that it will ask for your credentials and once you provide them correctly it will create a database and store the results inside
+  In order for this to work you will have to run both main_part() and prediction_world()
+7)Once main part has run it will output a csv with the similarities. This is a required input of all the other functions in order to avoid recalculation of it.
+  Besides that the other functions are independent in terms of predicting and evalueting the results.
+8)At the end of each part it will print the evaluation tests (mae,nmae,mrse)
+More other there is a function to predict the ratings for a specific country which you will have to choose
