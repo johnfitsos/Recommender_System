@@ -45,7 +45,7 @@ How to run:
 
 PART B
 ----------------------------------------------------------------------------------------------------
-Make sure you have the tweets.json.0-45 in the same folder as the .py files
+Make sure you have the tweets.json.0-45 in your own pc in the same folder as the .py files
 
 How to run:
 1)Run the Tweets-HeavyHitters.py
