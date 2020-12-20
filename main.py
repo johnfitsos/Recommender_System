@@ -2,6 +2,7 @@ import mysql.connector
 import pandas as pd
 import numpy as np
 import os
+import json
 import re
 
 
@@ -257,8 +258,8 @@ def main_part():
 def prediction_world():
     # _____________________________________K_nearest_______________________________________________________________
     # Delete the csv if it exists
-    if os.path.exists("k_nearest.csv"):
-        os.remove('k_nearest.csv')
+    # if os.path.exists("k_nearest.csv"):
+    #     os.remove('k_nearest.csv')
 
     # Read as DataFrame the csv of user pairs similarity
     df = pd.read_csv('user_similarity.csv', sep=';', names=['user_a', 'user_b', 'c_sim'])
@@ -277,12 +278,27 @@ def prediction_world():
         temp_df = temp_df[['user_a', 'user_b', 'c_sim']] #name the columns
         # print(temp_df)
         temp_df.to_csv('k_nearest.csv', mode='a', header=False, index=False)
+        counter =0
+        nearest = 0
+        for row in list(temp_df['user_a']):
+            counter = -1
+            for row2 in list(temp_df['user_b']):
+                counter += 1
+                data = [row,row2,list(temp_df['c_sim'])[counter]]
+                nearest +=1
+
+                with open('neighbours-k-books.data','a') as f:
+                    json.dump(data,f)
+                f.close()
+                if nearest == 1:
+                    break
+
     print('Finished!')
 
-    # temp_df.to_json('k_nearest_json')
+
 
     # -------------------------------------Predict----------------------------------------------------------------
-    # Read the appropriate DataFrames and delete the csv with predictions of each user if exists
+    #Read the appropriate DataFrames and delete the csv with predictions of each user if exists
     df_mean = pd.read_csv('user_av_rating.csv', names=['user', 'mean_rating'], sep=';')
     df_mean['mean_rating'] = df_mean['mean_rating'].astype('float32')
     df_mean['user'] = df_mean['user'].astype('int32')
@@ -893,20 +909,20 @@ def sql_load(p,u):
 
 
 
-#
-# main_part()
-# prediction_world()
-# prediction_america()
-# non_america()
-#
-# passwr = input('Enter password:')
-# usern = input('Enter User-Name:')
-# sql_load(p=passwr, u=usern)
-#
-# c = str(input('choose a country:'))
-#
-# try:
-#
-#     country(c)
-# except:
-#     print('Country not exists.')
+
+main_part()
+prediction_world()
+prediction_america()
+non_america()
+
+passwr = input('Enter password:')
+usern = input('Enter User-Name:')
+sql_load(p=passwr, u=usern)
+
+c = str(input('choose a country:'))
+
+try:
+
+    country(c)
+except:
+    print('Country not exists.')
